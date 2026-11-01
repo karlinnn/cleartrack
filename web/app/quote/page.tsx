@@ -1,58 +1,81 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getServices } from "@/lib/api";
 import QuoteForm from "@/components/QuoteForm";
 
 export const metadata: Metadata = {
   title: "Request a quote — ClearTrack",
   description:
-    "Tell us about your document-clearing requirements and we will respond within one business day.",
+    "Submit your document clearing requirements. Receive a confirmed quote with a fixed fee and a reference number within one business day.",
 };
 
-/** Strip HTML tags from a string (runs on the server, no DOM needed). */
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
 export default async function QuotePage() {
-  const services = await getServices();
-  const serviceNames = services.map((s) => stripHtml(s.title.rendered));
+  const posts = await getServices();
+  const services = posts.map((p) => ({
+    slug: p.slug,
+    title: stripHtml(p.title.rendered),
+  }));
 
   return (
-    <main
+    <div
       style={{
-        flex: 1,
-        maxWidth: "680px",
-        width: "100%",
+        maxWidth: "760px",
         margin: "0 auto",
-        padding: "60px 24px 80px",
+        padding: "64px 24px 80px",
+        width: "100%",
       }}
     >
-      <header style={{ marginBottom: "36px" }}>
-        <h1
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontSize: "clamp(1.75rem, 4vw, 2.25rem)",
-            color: "var(--color-ink)",
-            marginBottom: "12px",
-          }}
-        >
-          Request a quote
-        </h1>
+      <div
+        style={{
+          borderBottom: "1px solid var(--color-rule)",
+          paddingBottom: "24px",
+          marginBottom: "40px",
+        }}
+      >
         <p
           style={{
             fontFamily: "var(--font-sans)",
-            fontSize: "1rem",
-            color: "var(--color-ink)",
-            maxWidth: "60ch",
-            lineHeight: 1.7,
+            fontSize: "0.8125rem",
+            color: "var(--color-bottle)",
+            marginBottom: "8px",
           }}
         >
-          Complete the form below and a ClearTrack adviser will respond within
-          one business day.
+          Request a quote
         </p>
-      </header>
+        <h1
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+            fontWeight: 700,
+            color: "var(--color-ink)",
+            lineHeight: 1.08,
+            marginBottom: "12px",
+          }}
+        >
+          Tell us about your documents
+        </h1>
+        <p
+          style={{
+            fontSize: "0.9375rem",
+            lineHeight: 1.7,
+            color: "var(--color-ink)",
+            opacity: 0.72,
+            maxWidth: "56ch",
+          }}
+        >
+          Four short steps. We will confirm requirements, timeline, and fees
+          within one business day. No commitment required at this stage.
+        </p>
+      </div>
 
-      <QuoteForm services={serviceNames} />
-    </main>
+      {/* Suspense boundary for useSearchParams inside QuoteForm */}
+      <Suspense fallback={null}>
+        <QuoteForm services={services} />
+      </Suspense>
+    </div>
   );
 }

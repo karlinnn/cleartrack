@@ -1,38 +1,39 @@
 import type { MetadataRoute } from "next";
-import { getServiceSlugs } from "@/lib/api";
+import { getServices } from "@/lib/api";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+const STATIC_ROUTES = [
+  "/",
+  "/services",
+  "/quote",
+  "/track",
+  "/how-it-works",
+  "/about",
+  "/countries",
+  "/faq",
+  "/security",
+  "/contact",
+  "/privacy",
+  "/terms",
+];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const slugs = await getServiceSlugs();
-
-  const staticRoutes: MetadataRoute.Sitemap = [
-    {
-      url: SITE_URL,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: `${SITE_URL}/services`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${SITE_URL}/quote`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-  ];
-
-  const serviceRoutes: MetadataRoute.Sitemap = slugs.map((slug) => ({
-    url: `${SITE_URL}/services/${slug}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly" as const,
+  const services = await getServices();
+  const serviceEntries: MetadataRoute.Sitemap = services.map((s) => ({
+    url: `${SITE_URL}/services/${s.slug}`,
+    lastModified: new Date(s.date),
+    changeFrequency: "monthly",
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...serviceRoutes];
+  const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map((route) => ({
+    url: `${SITE_URL}${route}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: route === "/" ? 1.0 : 0.8,
+  }));
+
+  return [...staticEntries, ...serviceEntries];
 }
