@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+/* ─── Design tokens (Tailwind v4 @theme inline) ─────────────────────── */
+@theme inline {
+  /* Colour palette */
+  --color-ink:    #10231F;
+  --color-paper:  #F1F3EF;
+  --color-bottle: #1F4D43;
+  --color-brass:  #B28A2E;
+  --color-rule:   #C9D0CA;
+
+  /* Typography */
+  --font-serif: var(--font-caslon), Georgia, "Times New Roman", serif;
+  --font-sans:  var(--font-public), system-ui, sans-serif;
+}
+
+/* ─── CSS custom properties on :root ────────────────────────────────── */
+:root {
+  --color-ink:    #10231F;
+  --color-paper:  #F1F3EF;
+  --color-bottle: #1F4D43;
+  --color-brass:  #B28A2E;
+  --color-rule:   #C9D0CA;
+  --font-serif: var(--font-caslon), Georgia, "Times New Roman", serif;
+  --font-sans:  var(--font-public), system-ui, sans-serif;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #10231F;
+  background-color: #F1F3EF;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: #F1F3EF;
+  color: #10231F;
+  font-family: var(--font-sans);
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  line-height: 1.1;
+  color: #10231F;
+  margin: 0;
+}
+
+p { margin: 0; }
+
+a {
+  color: #1F4D43;
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ─── Focus ring ─────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #B28A2E;
+  outline-offset: 2px;
+}
+
+/* ─── Seal stamp animation ───────────────────────────────────────────── */
+.seal-stamp {
+  transform-origin: center;
+  animation: seal-press 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-iteration-count: 1;
+}
+
+@keyframes seal-press {
+  0%   { transform: scale(1.15); opacity: 0.6; }
+  60%  { transform: scale(0.97); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-stamp {
+    animation: none;
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ─── Button press ────────────────────────────────────────────────────── */
+.btn-press {
+  position: relative;
+  box-shadow: 3px 3px 0 var(--color-ink);
+  transition: box-shadow 0.08s ease, transform 0.08s ease;
+}
+.btn-press:active {
+  box-shadow: 0 0 0 var(--color-ink);
+  transform: translate(3px, 3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-press { box-shadow: none; transition: none; }
+}
+
+/* ─── Ledger row (brass bar slides in, text shifts 14px) ─────────────── */
+.ledger-row {
+  position: relative;
+  overflow: hidden;
+  transition: padding-left 0.18s ease;
+}
+.ledger-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-brass);
+  transform: translateX(-3px);
+  transition: transform 0.18s ease;
+}
+.ledger-row:hover,
+.ledger-row:focus-within {
+  padding-left: 14px;
+}
+.ledger-row:hover::before,
+.ledger-row:focus-within::before {
+  transform: translateX(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger-row,
+  .ledger-row::before { transition: none; }
+}
+
+/* ─── Stamp mark keyframe (used by StampAnywhere) ────────────────────── */
+@keyframes stamp-mark {
+  0%   { transform: rotate(var(--r, 0deg)) scale(1.7); opacity: 0.9; }
+  30%  { transform: rotate(var(--r, 0deg)) scale(0.95); opacity: 1; }
+  55%  { transform: rotate(var(--r, 0deg)) scale(1.02); opacity: 1; }
+  100% { transform: rotate(var(--r, 0deg)) scale(1); opacity: 0; }
+}
+
+/* ─── Hero headline slide-up (HeroHeadline in page.tsx) ──────────────── */
+@keyframes hero-line-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+
+/* Clip container — one per headline line */
+.hero-line-clip {
+  display: block;
+  overflow: hidden;
+  line-height: 1.12;
+}
+
+/* The sliding span inside each clip */
+.hero-line-text {
+  display: block;
+  animation: hero-line-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-line-text {
+    animation: none;
+    transform: translateY(0);
+  }
+}
