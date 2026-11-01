@@ -36,24 +36,9 @@ Environment variables:
 
 | Name | Purpose |
 |---|---|
-| NEXT_PUBLIC_WP_API_URL | WordPress.com REST API base URL |
-| NEXT_PUBLIC_SITE_URL | Public site URL, used for the sitemap and metadata |
+| NEXT_PUBLIC_WP_API_URL : https://public-api.wordpress.com/wp/v2/sites/cleartrackdemo.wordpress.com | WordPress.com REST API base URL |
+| NEXT_PUBLIC_SITE_URL: https://cleartrack-biizv04k0-karlinfrancis-4599s-projects.vercel.app/ | Public site URL, used for the sitemap and metadata |
 
-## Decisions I made
-
-- [Write 3 or 4 decisions in your own words, for example: moving the WordPress
-  entity decoding into the API layer; keeping mock data out of production;
-  not collecting ID numbers in the quote form because the business handles
-  identity documents; the migration audit script.]
-
-## Quality
-
-| Check | Score |
-|---|---|
-| Lighthouse Performance | [x] |
-| Lighthouse Accessibility | [x] |
-| Lighthouse Best Practices | [x] |
-| Lighthouse SEO | [x] |
 
 ## Known limits
 
@@ -73,6 +58,4 @@ Environment variables:
 - Arabic and English with right-to-left layout
 - Automated tests for the quote validation and checker logic
 
-## Screenshots
 
-[Add 3 or 4 images from docs/screenshots]
