@@ -21,12 +21,7 @@ const nextConfig: NextConfig = {
         destination: "/services",
         permanent: true,
       },
-      // /contact-us → /contact (real page now)
-      {
-        source: "/contact-us",
-        destination: "/contact",
-        permanent: true,
-      },
+
     ];
   },
 };
