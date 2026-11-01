@@ -153,3 +153,5 @@ vite.config.ts.timestamp-*
 node_modules
 .next
 .expo
+
+.claude/

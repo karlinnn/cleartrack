@@ -5,8 +5,10 @@ licence renewal, translation, Emirates ID and power of attorney services.
 Built as a headless setup: WordPress.com holds the content and a Next.js
 site renders it.
 
-**Live site:** [add Vercel link]
-**Mobile app:** [add APK or video link]
+**Live site:** https://cleartrack-biizv04k0-karlinfrancis-4599s-projects.vercel.app/
+**Mobile app:** https://expo.dev/accounts/karlinnn/projects/cleartrack/builds/405045c0-c6d8-4aea-a704-e44565de88ba 
+**Video link(website):** https://www.boomshare.ai/shared/01M6C7QYY10Z3HK5E2AC89RRXQ
+**Video link(app):** https://drive.google.com/file/d/1ei18g63nHBDH59crHK2ydzksodCs6NI5/view?usp=drive_link
 
 ## What it does
 
