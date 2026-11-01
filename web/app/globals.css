@@ -89,3 +89,81 @@ a:hover { text-decoration: underline; }
     opacity: 1;
   }
 }
+
+/* ─── Button press ────────────────────────────────────────────────────── */
+.btn-press {
+  position: relative;
+  box-shadow: 3px 3px 0 var(--color-ink);
+  transition: box-shadow 0.08s ease, transform 0.08s ease;
+}
+.btn-press:active {
+  box-shadow: 0 0 0 var(--color-ink);
+  transform: translate(3px, 3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-press { box-shadow: none; transition: none; }
+}
+
+/* ─── Ledger row (brass bar slides in, text shifts 14px) ─────────────── */
+.ledger-row {
+  position: relative;
+  overflow: hidden;
+  transition: padding-left 0.18s ease;
+}
+.ledger-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-brass);
+  transform: translateX(-3px);
+  transition: transform 0.18s ease;
+}
+.ledger-row:hover,
+.ledger-row:focus-within {
+  padding-left: 14px;
+}
+.ledger-row:hover::before,
+.ledger-row:focus-within::before {
+  transform: translateX(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger-row,
+  .ledger-row::before { transition: none; }
+}
+
+/* ─── Stamp mark keyframe (used by StampAnywhere) ────────────────────── */
+@keyframes stamp-mark {
+  0%   { transform: rotate(var(--r, 0deg)) scale(1.7); opacity: 0.9; }
+  30%  { transform: rotate(var(--r, 0deg)) scale(0.95); opacity: 1; }
+  55%  { transform: rotate(var(--r, 0deg)) scale(1.02); opacity: 1; }
+  100% { transform: rotate(var(--r, 0deg)) scale(1); opacity: 0; }
+}
+
+/* ─── Hero headline slide-up (HeroHeadline in page.tsx) ──────────────── */
+@keyframes hero-line-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+
+/* Clip container — one per headline line */
+.hero-line-clip {
+  display: block;
+  overflow: hidden;
+  line-height: 1.12;
+}
+
+/* The sliding span inside each clip */
+.hero-line-text {
+  display: block;
+  animation: hero-line-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-line-text {
+    animation: none;
+    transform: translateY(0);
+  }
+}

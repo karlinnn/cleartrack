@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import Seal from "@/components/Seal";
 
 export default function NotFound() {
+  const [stamped, setStamped] = useState(false);
+
   return (
     <div
       style={{
@@ -45,7 +51,7 @@ export default function NotFound() {
         The page you requested does not exist or has been moved. Return to the
         home page or browse our services.
       </p>
-      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "48px" }}>
         <Link
           href="/"
           id="not-found-home"
@@ -84,8 +90,61 @@ export default function NotFound() {
           Browse services
         </Link>
       </div>
+
+      {/* Stamp this page */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "24px", flexWrap: "wrap" }}>
+        <button
+          id="not-found-stamp"
+          type="button"
+          className="btn-press nf-stamp-btn"
+          onClick={() => setStamped(true)}
+          aria-label="Stamp this page as Not Found"
+          style={{
+            padding: "10px 20px",
+            border: "1.5px solid var(--color-rule)",
+            borderRadius: "2px",
+            background: "var(--color-paper)",
+            color: "var(--color-ink)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Stamp this page
+        </button>
+
+        {stamped && (
+          <div
+            aria-label="Not Found seal"
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}
+          >
+            <span key={String(stamped)} className="nf-seal-wrapper">
+              <Seal
+                stamp
+                size={120}
+                text="NOT FOUND · 404 ·"
+              />
+            </span>
+          </div>
+        )}
+      </div>
+
       <style>{`
         .btn-primary:hover { background-color: #163d35; border-color: #163d35; }
+        .nf-stamp-btn:hover { border-color: var(--color-bottle); color: var(--color-bottle); }
+        .nf-seal-wrapper {
+          display: block;
+          animation: ctk-press-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+        }
+        @keyframes ctk-press-in {
+          0% { transform: scale(1.18); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nf-seal-wrapper { animation: none; }
+        }
       `}</style>
     </div>
   );

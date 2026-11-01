@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getServices } from "@/lib/api";
-import ServiceCard from "@/components/ServiceCard";
+import ServicesClient from "@/components/ServicesClient";
 
 export const metadata: Metadata = {
   title: "Services",
@@ -79,20 +79,8 @@ export default async function ServicesPage() {
         </p>
       </div>
 
-      {/* Ledger */}
-      {services.length === 0 ? (
-        <p style={{ padding: "40px 0", color: "var(--color-ink)", opacity: 0.6 }}>
-          No services are currently listed. Please check back shortly.
-        </p>
-      ) : (
-        <div role="list" aria-label="All services">
-          {services.map((post, i) => (
-            <div key={post.id} role="listitem">
-              <ServiceCard post={post} priority={i === 0} />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Client wrapper: search, chips, filtered list */}
+      <ServicesClient services={services} />
     </div>
   );
 }

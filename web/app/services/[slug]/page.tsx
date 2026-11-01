@@ -4,6 +4,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getServiceBySlug, getServiceSlugs } from "@/lib/api";
 import Seal from "@/components/Seal";
+import { cleanText } from "@/lib/text";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -19,27 +20,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getServiceBySlug(slug);
   if (!post) return { title: "Service not found" };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const excerpt = post.excerpt.rendered.replace(/<[^>]*>/g, "").trim();
-  const media   = post._embedded?.["wp:featuredmedia"]?.[0];
-  const imgUrl  = media?.source_url ?? null;
-  const imgW    = media?.media_details?.width  ?? 1200;
-  const imgH    = media?.media_details?.height ?? 630;
-
+  const excerpt = cleanText(post.excerpt.rendered);
   return {
-    title: post.title.rendered,
+    title: cleanText(post.title.rendered),
     description: excerpt,
-    alternates: {
-      canonical: `${siteUrl}/services/${slug}`,
-    },
-    openGraph: {
-      title: post.title.rendered,
-      description: excerpt,
-      url: `${siteUrl}/services/${slug}`,
-      ...(imgUrl
-        ? { images: [{ url: imgUrl, width: imgW, height: imgH, alt: post.title.rendered }] }
-        : {}),
-    },
   };
 }
 
@@ -59,7 +43,7 @@ export default async function ServiceDetailPage({ params }: Props) {
 
   if (!post) notFound();
 
-  const title       = post.title.rendered;
+  const title       = cleanText(post.title.rendered);
   const media       = post._embedded?.["wp:featuredmedia"]?.[0];
   const imgSrc      = media?.source_url ?? null;
   const imgAlt      = media?.alt_text   ?? title;

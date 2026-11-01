@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { APPLICATIONS } from "@/data/applications";
+import { applications } from "@/data/applications";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ ref: string }> },
-) {
+interface RouteContext {
+  params: Promise<{ ref: string }>;
+}
+
+export async function GET(_req: NextRequest, { params }: RouteContext) {
   const { ref } = await params;
-  const app = APPLICATIONS.find(
-    (a) => a.reference.toLowerCase() === ref.toLowerCase(),
-  );
-  if (!app) {
+  const application = applications.find((a) => a.reference === ref);
+
+  if (!application) {
     return NextResponse.json(
       {
-        error: `We could not find reference ${ref}. Check the format: CT-2026-0000.`,
+        error:
+          "We could not find that reference. Check the format: CT-2026-0000.",
       },
-      { status: 404 },
+      { status: 404 }
     );
   }
-  return NextResponse.json(app);
+
+  return NextResponse.json(application);
 }

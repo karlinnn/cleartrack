@@ -1,96 +1,87 @@
-export type Stage =
-  | "Submitted"
-  | "Documents under review"
-  | "Documents verified"
-  | "With the authority"
-  | "Ready for collection"
-  | "Delivered";
+export type Stage = 0 | 1 | 2 | 3 | 4 | 5;
 
-export const STAGES: Stage[] = [
-  "Submitted",
-  "Documents under review",
-  "Documents verified",
-  "With the authority",
-  "Ready for collection",
-  "Delivered",
-];
+export const STAGE_LABELS: Record<Stage, string> = {
+  0: "Submitted",
+  1: "Documents under review",
+  2: "Documents verified",
+  3: "With the authority",
+  4: "Ready for collection",
+  5: "Delivered",
+};
 
 export interface HistoryEntry {
-  date: string; // ISO
-  note: string;
+  stage: Stage;
+  timestamp: string; // ISO 8601
+  note?: string;
 }
 
 export interface Application {
   reference: string;
   firstName: string;
   service: string;
-  stageIndex: number; // 0-5
+  stage: Stage;
   history: HistoryEntry[];
   officerRemark: string;
-  estimatedDate: string; // "DD Month YYYY"
-  additionalDocumentsRequired?: boolean;
+  estimatedDate: string; // ISO date YYYY-MM-DD
+  extraDocsRequired?: boolean;
 }
 
-export const APPLICATIONS: Application[] = [
+export const applications: Application[] = [
   {
     reference: "CT-2026-0042",
-    firstName: "Priya",
-    service: "Document attestation",
-    stageIndex: 1,
+    firstName: "Amara",
+    service: "Educational certificate attestation",
+    stage: 5,
     history: [
-      { date: "2026-10-28T09:14:00Z", note: "File received at ClearTrack office." },
-      { date: "2026-10-29T10:02:00Z", note: "Assigned to clearing officer. Documents under review." },
+      { stage: 0, timestamp: "2026-10-14T09:12:00Z", note: "Request received and reference issued." },
+      { stage: 1, timestamp: "2026-10-15T10:30:00Z", note: "Documents submitted to review team." },
+      { stage: 2, timestamp: "2026-10-17T14:05:00Z", note: "All documents verified and accepted." },
+      { stage: 3, timestamp: "2026-10-20T08:45:00Z", note: "File lodged with the issuing authority." },
+      { stage: 4, timestamp: "2026-10-27T16:00:00Z", note: "Attestation complete. Ready for collection." },
+      { stage: 5, timestamp: "2026-10-29T11:20:00Z", note: "Documents delivered to applicant." },
     ],
-    officerRemark:
-      "Original birth certificate received. Awaiting sight of the supporting authority letter before submission.",
-    estimatedDate: "7 November 2026",
-    additionalDocumentsRequired: true,
+    officerRemark: "All attestations completed without issue. Please retain originals for your records.",
+    estimatedDate: "2026-10-29",
   },
   {
     reference: "CT-2026-0043",
-    firstName: "James",
-    service: "Apostille certification",
-    stageIndex: 3,
+    firstName: "Rohan",
+    service: "Commercial document legalisation",
+    stage: 3,
     history: [
-      { date: "2026-10-22T08:30:00Z", note: "File received at ClearTrack office." },
-      { date: "2026-10-23T11:45:00Z", note: "Documents reviewed and verified. No issues found." },
-      { date: "2026-10-24T09:00:00Z", note: "Documents verified and submitted to the authority." },
-      { date: "2026-10-27T14:20:00Z", note: "Submission acknowledged by competent authority. Processing underway." },
+      { stage: 0, timestamp: "2026-10-20T11:00:00Z", note: "Request received and reference issued." },
+      { stage: 1, timestamp: "2026-10-21T09:15:00Z", note: "Documents submitted to review team." },
+      { stage: 2, timestamp: "2026-10-23T13:40:00Z", note: "All documents verified and accepted." },
+      { stage: 3, timestamp: "2026-10-25T10:00:00Z", note: "File lodged with the Ministry of Foreign Affairs." },
     ],
-    officerRemark:
-      "Submission is with the Foreign, Commonwealth and Development Office. Standard queue — no issues reported.",
-    estimatedDate: "5 November 2026",
+    officerRemark: "File is currently with the authority. Processing times may vary during public holidays.",
+    estimatedDate: "2026-11-04",
   },
   {
     reference: "CT-2026-0044",
-    firstName: "Fatima",
-    service: "Translation and notarisation",
-    stageIndex: 4,
+    firstName: "Lena",
+    service: "Personal document translation and notarisation",
+    stage: 1,
+    extraDocsRequired: true,
     history: [
-      { date: "2026-10-18T10:00:00Z", note: "File received at ClearTrack office." },
-      { date: "2026-10-19T09:30:00Z", note: "Translation completed. Documents under notary review." },
-      { date: "2026-10-21T11:00:00Z", note: "Notarisation complete. Documents verified." },
-      { date: "2026-10-22T08:45:00Z", note: "Submitted to the relevant authority." },
-      { date: "2026-10-29T15:10:00Z", note: "Authority has released the documents. Ready for collection." },
+      { stage: 0, timestamp: "2026-10-28T08:30:00Z", note: "Request received and reference issued." },
+      { stage: 1, timestamp: "2026-10-29T10:00:00Z", note: "Documents submitted to review team." },
     ],
     officerRemark:
-      "Documents are ready at our Dubai office. You may collect Monday to Thursday, 08:30–17:00.",
-    estimatedDate: "Available now",
+      "Additional supporting documents are required. Please upload a certified copy of your passport via the secure portal link sent to your email.",
+    estimatedDate: "2026-11-10",
   },
   {
     reference: "CT-2026-0045",
-    firstName: "Mohammed",
-    service: "Commercial document clearing",
-    stageIndex: 5,
+    firstName: "Tariq",
+    service: "Legal power of attorney attestation",
+    stage: 2,
     history: [
-      { date: "2026-10-10T09:00:00Z", note: "File received at ClearTrack office." },
-      { date: "2026-10-11T10:15:00Z", note: "Commercial documents reviewed. Complete set confirmed." },
-      { date: "2026-10-13T09:00:00Z", note: "Documents verified. Authority submission prepared." },
-      { date: "2026-10-14T08:30:00Z", note: "Submitted to Chamber of Commerce." },
-      { date: "2026-10-20T13:45:00Z", note: "Chamber attestation collected. Documents ready." },
-      { date: "2026-10-22T11:00:00Z", note: "Delivered by registered courier. Signed receipt confirmed." },
+      { stage: 0, timestamp: "2026-10-26T14:00:00Z", note: "Request received and reference issued." },
+      { stage: 1, timestamp: "2026-10-27T09:30:00Z", note: "Documents submitted to review team." },
+      { stage: 2, timestamp: "2026-10-30T11:45:00Z", note: "All documents verified and accepted." },
     ],
-    officerRemark: "All documents delivered and signed for. File closed.",
-    estimatedDate: "Completed",
+    officerRemark: "Documents verified successfully. File will be forwarded to the authority shortly.",
+    estimatedDate: "2026-11-07",
   },
 ];

@@ -3,6 +3,9 @@ import { Libre_Caslon_Text, Public_Sans } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ScrollBar from "@/components/ScrollBar";
+import StampAnywhere from "@/components/StampAnywhere";
+import { ToastProvider } from "@/components/Toast";
 
 const caslon = Libre_Caslon_Text({
   subsets: ["latin"],
@@ -25,9 +28,7 @@ export const metadata: Metadata = {
   },
   description:
     "ClearTrack handles attestation, apostille, translation, and commercial document clearing — correctly the first time.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://cleartrack.com"),
   openGraph: {
     siteName: "ClearTrack",
     locale: "en_GB",
@@ -37,13 +38,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${caslon.variable} ${publicSans.variable}`}>
+    <html
+      lang="en"
+      className={`${caslon.variable} ${publicSans.variable}`}
+    >
       <body>
-        <Header />
-        <main id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          {children}
-        </main>
-        <Footer />
+        <ToastProvider>
+          <ScrollBar />
+          <StampAnywhere />
+          <Header />
+          <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            {children}
+          </main>
+          <Footer />
+        </ToastProvider>
       </body>
     </html>
   );

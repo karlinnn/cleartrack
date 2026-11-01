@@ -1,19 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { WPPost } from "@/lib/api";
+import { cleanText } from "@/lib/text";
 
 interface ServiceCardProps {
   post: WPPost;
   priority?: boolean;
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").trim();
-}
-
 export default function ServiceCard({ post, priority = false }: ServiceCardProps) {
-  const title   = post.title.rendered;
-  const excerpt = stripHtml(post.excerpt.rendered);
+  const title   = cleanText(post.title.rendered);
+  const excerpt = cleanText(post.excerpt.rendered);
   const href    = `/services/${post.slug}`;
 
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
@@ -22,6 +19,7 @@ export default function ServiceCard({ post, priority = false }: ServiceCardProps
 
   return (
     <article
+      className="ledger-row"
       style={{
         display: "grid",
         gridTemplateColumns: "80px 1fr",

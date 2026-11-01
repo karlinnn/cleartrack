@@ -1,897 +1,720 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import Seal from "@/components/Seal";
-import { useMultiStepForm } from "@/hooks/useMultiStepForm";
 import {
-  validateStep1,
-  validateStep2,
-  validateStep3,
-  type FieldErrors,
-} from "@/lib/validation";
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  FormEvent,
+} from "react";
+import { useMultiStepForm } from "@/hooks/useMultiStepForm";
+import { QuoteData } from "@/lib/validation";
+import { useToast } from "@/components/Toast";
 
-/* ── Types ──────────────────────────────────────────────────────────────── */
+/* ------------------------------------------------------------------ */
+/* Constants                                                            */
+/* ------------------------------------------------------------------ */
 
-interface QuoteFormData extends Record<string, unknown> {
-  service: string;
-  documentCategory: string;
-  destinationCountry: string;
-  purpose: string;
-  documentCount: string;
-  urgency: "standard" | "urgent" | "";
-  name: string;
-  email: string;
-  phone: string;
-  company: string; // honeypot
+const TOTAL_STEPS = 4;
+const STORAGE_KEY = "ct_quote_draft";
+const CATEGORIES = ["Personal", "Educational", "Commercial", "Legal"] as const;
+const URGENCIES = [
+  { value: "standard", label: "Standard" },
+  { value: "urgent", label: "Urgent" },
+] as const;
+const STEP_LABELS = ["Service", "Documents", "Contact", "Review"] as const;
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                              */
+/* ------------------------------------------------------------------ */
+
+function loadDraft(): QuoteData {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as QuoteData) : {};
+  } catch {
+    return {};
+  }
 }
 
-const INITIAL: QuoteFormData = {
-  service: "",
-  documentCategory: "",
-  destinationCountry: "",
-  purpose: "",
-  documentCount: "",
-  urgency: "",
-  name: "",
-  email: "",
-  phone: "",
-  company: "",
-};
+function saveDraft(data: QuoteData): void {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    /* ignore */
+  }
+}
 
-const DOC_CATEGORIES = [
-  "Personal (birth/marriage/death certificate)",
-  "Educational (degree, transcript, diploma)",
-  "Commercial (trade licence, company registration)",
-  "Legal (power of attorney, affidavit, court order)",
-  "Medical",
-  "Other",
-];
+function clearDraft(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
+/* ------------------------------------------------------------------ */
+/* Inline Seal (small, press-in animation)                             */
+/* ------------------------------------------------------------------ */
 
-const S = {
-  label: {
-    display: "block",
-    fontFamily: "var(--font-sans)",
-    fontSize: "0.875rem",
-    color: "var(--color-ink)",
-    marginBottom: "6px",
-  } as React.CSSProperties,
-  input: {
-    display: "block",
-    width: "100%",
-    fontFamily: "var(--font-sans)",
-    fontSize: "0.9375rem",
-    color: "var(--color-ink)",
-    backgroundColor: "var(--color-paper)",
-    border: "1px solid var(--color-rule)",
-    borderRadius: "2px",
-    padding: "10px 12px",
-    outline: "none",
-  } as React.CSSProperties,
-  select: {
-    display: "block",
-    width: "100%",
-    fontFamily: "var(--font-sans)",
-    fontSize: "0.9375rem",
-    color: "var(--color-ink)",
-    backgroundColor: "var(--color-paper)",
-    border: "1px solid var(--color-rule)",
-    borderRadius: "2px",
-    padding: "10px 12px",
-    outline: "none",
-    appearance: "none" as const,
-    backgroundImage:
-      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2310231F' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
-    backgroundRepeat: "no-repeat",
-    backgroundPosition: "right 12px center",
-    paddingRight: "36px",
-  } as React.CSSProperties,
-  error: {
-    fontFamily: "var(--font-sans)",
-    fontSize: "0.8125rem",
-    color: "#b91c1c",
-    marginTop: "4px",
-  } as React.CSSProperties,
-  field: { marginBottom: "20px" } as React.CSSProperties,
-};
-
-function FieldError({ msg }: { msg?: string }) {
-  if (!msg) return null;
+function SuccessSeal() {
   return (
-    <p role="alert" style={S.error}>
-      {msg}
-    </p>
+    <svg
+      className="ct-seal-success"
+      width="96"
+      height="96"
+      viewBox="0 0 96 96"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="48" cy="48" r="46" stroke="var(--color-bottle)" strokeWidth="2" fill="none" />
+      <circle cx="48" cy="48" r="38" stroke="var(--color-bottle)" strokeWidth="1" fill="none" />
+      <text fontSize="7" fill="var(--color-bottle)" fontFamily="inherit">
+        <textPath href="#ct-seal-path" startOffset="0%">
+          CLEARTRACK · CONFIRMED · CLEARTRACK · CONFIRMED ·
+        </textPath>
+      </text>
+      <defs>
+        <path
+          id="ct-seal-path"
+          d="M48,48 m-32,0 a32,32 0 1,1 64,0 a32,32 0 1,1 -64,0"
+        />
+      </defs>
+      {/* Compass star */}
+      <g stroke="var(--color-bottle)" strokeWidth="1.5" fill="none">
+        <line x1="48" y1="30" x2="48" y2="66" />
+        <line x1="30" y1="48" x2="66" y2="48" />
+        <line x1="36" y1="36" x2="60" y2="60" />
+        <line x1="60" y1="36" x2="36" y2="60" />
+      </g>
+      <circle cx="48" cy="48" r="4" fill="var(--color-bottle)" />
+      {/* Tick mark */}
+      <polyline
+        points="38,48 45,55 58,40"
+        stroke="var(--color-bottle)"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
-/* ── Step indicator ─────────────────────────────────────────────────────── */
+/* ------------------------------------------------------------------ */
+/* Field helpers                                                        */
+/* ------------------------------------------------------------------ */
 
-const STEP_LABELS = ["Service & document", "Quantity & urgency", "Your details", "Review"];
+interface FieldProps {
+  id: string;
+  label: string;
+  error?: string;
+  children: (describedBy: string | undefined) => React.ReactNode;
+}
 
-function StepIndicator({ current }: { current: number }) {
+function Field({ id, label, error, children }: FieldProps) {
+  const errId = error ? `${id}-err` : undefined;
   return (
-    <nav aria-label="Form progress" style={{ marginBottom: "40px" }}>
-      <ol
-        style={{
-          listStyle: "none",
-          margin: 0,
-          padding: 0,
-          display: "flex",
-          gap: "0",
-          borderBottom: "1px solid var(--color-rule)",
-        }}
-      >
+    <div className="ct-field">
+      <label className="ct-label" htmlFor={id}>
+        {label}
+      </label>
+      {children(errId)}
+      {error && (
+        <p id={errId} className="ct-field-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Props                                                                */
+/* ------------------------------------------------------------------ */
+
+interface QuoteFormProps {
+  services: string[];
+  initialService?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Main component                                                       */
+/* ------------------------------------------------------------------ */
+
+export default function QuoteForm({ services, initialService }: QuoteFormProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [networkError, setNetworkError] = useState("");
+  const [success, setSuccess] = useState<{ reference: string } | null>(null);
+  const { showToast } = useToast();
+
+  const initialData: QuoteData = {
+    ...loadDraft(),
+    ...(initialService ? { service: initialService } : {}),
+  };
+
+  const { step, data, errors, setField, next, back, goTo } = useMultiStepForm({
+    totalSteps: TOTAL_STEPS,
+    initialData,
+    onStepChange: () => {
+      setTimeout(() => headingRef.current?.focus(), 50);
+    },
+  });
+
+  /* Persist draft on every data change */
+  useEffect(() => {
+    saveDraft(data);
+  }, [data]);
+
+  /* ---------------------------------------------------------------- */
+  /* Submit                                                             */
+  /* ---------------------------------------------------------------- */
+
+  const handleSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setNetworkError("");
+      setSubmitting(true);
+      try {
+        const res = await fetch("/api/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          setNetworkError(
+            json?.errors
+              ? Object.values(json.errors as Record<string, string>).join(" ")
+              : "Something went wrong. Please try again."
+          );
+        } else {
+          clearDraft();
+          setSuccess({ reference: json.reference as string });
+        }
+      } catch {
+        setNetworkError(
+          "Unable to reach the server. Please check your connection and try again."
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [data]
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* Copy reference                                                     */
+  /* ---------------------------------------------------------------- */
+
+  const handleCopy = useCallback(() => {
+    if (!success) return;
+    navigator.clipboard.writeText(success.reference).then(() => {
+      showToast("Copied");
+    });
+  }, [success, showToast]);
+
+  /* ---------------------------------------------------------------- */
+  /* Success screen                                                     */
+  /* ---------------------------------------------------------------- */
+
+  if (success) {
+    return (
+      <div className="ct-quote-success">
+        <div className="ct-seal-wrap">
+          <SuccessSeal />
+        </div>
+        <p className="ct-reference-label">Your reference</p>
+        <p className="ct-reference-number">{success.reference}</p>
+        <div className="ct-success-actions">
+          <button
+            type="button"
+            className="ct-btn ct-btn--secondary"
+            onClick={handleCopy}
+          >
+            Copy reference
+          </button>
+          <a
+            href={`/track?ref=${encodeURIComponent(success.reference)}`}
+            className="ct-btn ct-btn--primary"
+          >
+            Track this application
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Step indicator                                                     */
+  /* ---------------------------------------------------------------- */
+
+  const stepIndicator = (
+    <nav className="ct-step-indicator" aria-label="Form progress">
+      <ol className="ct-step-list">
         {STEP_LABELS.map((label, i) => {
-          const done = i < current;
-          const active = i === current;
+          const n = i + 1;
+          const active = n === step;
+          const done = n < step;
           return (
             <li
-              key={label}
-              style={{
-                flex: 1,
-                borderBottom: active
-                  ? "2px solid var(--color-bottle)"
-                  : done
-                  ? "2px solid var(--color-brass)"
-                  : "2px solid transparent",
-                paddingBottom: "12px",
-                paddingRight: "12px",
-              }}
+              key={n}
+              className={`ct-step-item${active ? " is-active" : done ? " is-done" : ""}`}
             >
-              <span
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "0.75rem",
-                  color: active
-                    ? "var(--color-bottle)"
-                    : done
-                    ? "var(--color-brass)"
-                    : "var(--color-ink)",
-                  opacity: done || active ? 1 : 0.45,
-                  display: "block",
-                }}
-                aria-current={active ? "step" : undefined}
-              >
-                {i + 1}. {label}
+              <span className="ct-step-num" aria-hidden="true">
+                {done ? "✓" : n}
               </span>
+              <span className="ct-step-name">{label}</span>
             </li>
           );
         })}
       </ol>
     </nav>
   );
-}
 
-/* ── Confirmation screen ─────────────────────────────────────────────────── */
+  /* ---------------------------------------------------------------- */
+  /* Step headings                                                      */
+  /* ---------------------------------------------------------------- */
 
-function Confirmation({
-  reference,
-  onReset,
-}: {
-  reference: string;
-  onReset: () => void;
-}) {
-  const [copied, setCopied] = React.useState(false);
+  const stepHeadings: Record<number, string> = {
+    1: "Service details",
+    2: "Document count and urgency",
+    3: "Your contact information",
+    4: "Review your request",
+  };
 
-  function copyRef() {
-    navigator.clipboard.writeText(reference).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
+  /* ---------------------------------------------------------------- */
+  /* Render                                                             */
+  /* ---------------------------------------------------------------- */
 
   return (
-    <div style={{ textAlign: "center", padding: "40px 0 20px" }}>
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: "28px" }}>
-        <Seal stamp size={140} text="ClearTrack · Confirmed ·" />
-      </div>
-      <h2
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: "clamp(1.25rem, 3vw, 1.75rem)",
-          fontWeight: 700,
-          color: "var(--color-ink)",
-          marginBottom: "8px",
-        }}
+    <div className="ct-quote-form-wrap">
+      {stepIndicator}
+
+      <form
+        onSubmit={step === TOTAL_STEPS ? handleSubmit : (e) => e.preventDefault()}
+        noValidate
+        aria-label="Quote request form"
       >
-        Enquiry received
-      </h2>
-      <p
-        style={{
-          fontFamily: "var(--font-sans)",
-          fontSize: "0.9375rem",
-          color: "var(--color-ink)",
-          opacity: 0.7,
-          marginBottom: "28px",
-          maxWidth: "48ch",
-          margin: "0 auto 28px",
-          lineHeight: 1.65,
-        }}
-      >
-        We will review your details and respond within one business day. Keep your
-        reference number — you can track progress at any time.
-      </p>
-      <p
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: "clamp(1.5rem, 4vw, 2rem)",
-          fontWeight: 700,
-          color: "var(--color-bottle)",
-          letterSpacing: "0.04em",
-          marginBottom: "16px",
-        }}
-        aria-label={`Your reference number is ${reference}`}
-      >
-        {reference}
-      </p>
-      <div
-        style={{
-          display: "flex",
-          gap: "12px",
-          justifyContent: "center",
-          flexWrap: "wrap",
-          marginBottom: "32px",
-        }}
-      >
-        <button
-          type="button"
-          onClick={copyRef}
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            color: "var(--color-bottle)",
-            backgroundColor: "var(--color-paper)",
-            border: "1px solid var(--color-rule)",
-            borderRadius: "2px",
-            padding: "9px 20px",
-            cursor: "pointer",
-          }}
-          className="copy-btn"
+        {/* Honeypot */}
+        <div style={{ position: "absolute", left: "-9999px", opacity: 0 }} aria-hidden="true">
+          <label htmlFor="company">Company</label>
+          <input
+            type="text"
+            id="company"
+            name="company"
+            tabIndex={-1}
+            autoComplete="off"
+            value={(data.company as string) ?? ""}
+            onChange={(e) => setField("company", e.target.value)}
+          />
+        </div>
+
+        <h2
+          className="ct-step-heading"
+          ref={headingRef}
+          tabIndex={-1}
         >
-          {copied ? "Copied \u2713" : "Copy reference"}
-        </button>
-        <a
-          href={`/track?ref=${encodeURIComponent(reference)}`}
-          style={{
-            display: "inline-block",
-            fontFamily: "var(--font-sans)",
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            color: "var(--color-paper)",
-            backgroundColor: "var(--color-bottle)",
-            border: "1px solid var(--color-bottle)",
-            borderRadius: "2px",
-            padding: "9px 20px",
-            textDecoration: "none",
-          }}
-          className="track-btn"
-        >
-          Track application
-        </a>
-      </div>
-      <button
-        type="button"
-        onClick={onReset}
-        style={{
-          fontFamily: "var(--font-sans)",
-          fontSize: "0.8125rem",
-          color: "var(--color-ink)",
-          opacity: 0.5,
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          textDecoration: "underline",
-          textUnderlineOffset: "3px",
-        }}
-      >
-        Submit another enquiry
-      </button>
+          {stepHeadings[step]}
+        </h2>
+
+        {/* ---- Step 1 ---- */}
+        {step === 1 && (
+          <div className="ct-step-fields">
+            <Field id="service" label="Service" error={errors.service}>
+              {(describedBy) => (
+                <select
+                  id="service"
+                  name="service"
+                  className="ct-select"
+                  value={(data.service as string) ?? ""}
+                  onChange={(e) => setField("service", e.target.value)}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.service}
+                >
+                  <option value="">Select a service</option>
+                  {services.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+
+            <Field id="category" label="Document category" error={errors.category}>
+              {(describedBy) => (
+                <select
+                  id="category"
+                  name="category"
+                  className="ct-select"
+                  value={(data.category as string) ?? ""}
+                  onChange={(e) => setField("category", e.target.value)}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.category}
+                >
+                  <option value="">Select a category</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+
+            <Field id="country" label="Country" error={errors.country}>
+              {(describedBy) => (
+                <input
+                  type="text"
+                  id="country"
+                  name="country"
+                  className="ct-input"
+                  placeholder="e.g. United Arab Emirates"
+                  value={(data.country as string) ?? ""}
+                  onChange={(e) => setField("country", e.target.value)}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.country}
+                />
+              )}
+            </Field>
+
+            <Field id="purpose" label="Purpose" error={errors.purpose}>
+              {(describedBy) => (
+                <textarea
+                  id="purpose"
+                  name="purpose"
+                  className="ct-textarea"
+                  rows={3}
+                  placeholder="Briefly describe why these documents are needed"
+                  value={(data.purpose as string) ?? ""}
+                  onChange={(e) => setField("purpose", e.target.value)}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.purpose}
+                />
+              )}
+            </Field>
+          </div>
+        )}
+
+        {/* ---- Step 2 ---- */}
+        {step === 2 && (
+          <div className="ct-step-fields">
+            <Field id="count" label="Number of documents" error={errors.count}>
+              {(describedBy) => (
+                <input
+                  type="number"
+                  id="count"
+                  name="count"
+                  className="ct-input"
+                  min={1}
+                  max={50}
+                  placeholder="1–50"
+                  value={(data.count as string) ?? ""}
+                  onChange={(e) =>
+                    setField("count", e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.count}
+                />
+              )}
+            </Field>
+
+            <Field id="urgency" label="Processing speed" error={errors.urgency}>
+              {(describedBy) => (
+                <div className="ct-radio-group" aria-describedby={describedBy}>
+                  {URGENCIES.map(({ value, label }) => (
+                    <label key={value} className="ct-radio-label">
+                      <input
+                        type="radio"
+                        name="urgency"
+                        value={value}
+                        checked={data.urgency === value}
+                        onChange={() => setField("urgency", value)}
+                        className="ct-radio"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </Field>
+          </div>
+        )}
+
+        {/* ---- Step 3 ---- */}
+        {step === 3 && (
+          <div className="ct-step-fields">
+            <p className="ct-notice">
+              Do not include passport or ID numbers here. We will ask for documents securely after confirming.
+            </p>
+
+            <Field id="name" label="Full name" error={errors.name}>
+              {(describedBy) => (
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  className="ct-input"
+                  autoComplete="name"
+                  value={(data.name as string) ?? ""}
+                  onChange={(e) => setField("name", e.target.value)}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.name}
+                />
+              )}
+            </Field>
+
+            <Field id="email" label="Email address" error={errors.email}>
+              {(describedBy) => (
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  className="ct-input"
+                  autoComplete="email"
+                  value={(data.email as string) ?? ""}
+                  onChange={(e) => setField("email", e.target.value)}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.email}
+                />
+              )}
+            </Field>
+
+            <Field id="phone" label="Phone (optional)" error={errors.phone}>
+              {(describedBy) => (
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  className="ct-input"
+                  autoComplete="tel"
+                  value={(data.phone as string) ?? ""}
+                  onChange={(e) => setField("phone", e.target.value)}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.phone}
+                />
+              )}
+            </Field>
+          </div>
+        )}
+
+        {/* ---- Step 4 – Review ---- */}
+        {step === 4 && (
+          <div className="ct-step-fields ct-review">
+            <ReviewSection
+              title="Service details"
+              onEdit={() => goTo(1)}
+              rows={[
+                { label: "Service", value: data.service as string },
+                { label: "Category", value: data.category as string },
+                { label: "Country", value: data.country as string },
+                { label: "Purpose", value: data.purpose as string },
+              ]}
+            />
+            <ReviewSection
+              title="Documents"
+              onEdit={() => goTo(2)}
+              rows={[
+                { label: "Count", value: String(data.count ?? "") },
+                { label: "Processing", value: data.urgency as string },
+              ]}
+            />
+            <ReviewSection
+              title="Contact"
+              onEdit={() => goTo(3)}
+              rows={[
+                { label: "Name", value: data.name as string },
+                { label: "Email", value: data.email as string },
+                { label: "Phone", value: (data.phone as string) || "—" },
+              ]}
+            />
+
+            {networkError && (
+              <p className="ct-field-error" role="alert">
+                {networkError}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ---- Navigation ---- */}
+        <div className="ct-form-nav">
+          {step > 1 && (
+            <button
+              type="button"
+              className="ct-btn ct-btn--secondary"
+              onClick={back}
+              disabled={submitting}
+            >
+              Back
+            </button>
+          )}
+          {step < TOTAL_STEPS && (
+            <button
+              type="button"
+              className="ct-btn ct-btn--primary btn-press"
+              onClick={next}
+            >
+              Next
+            </button>
+          )}
+          {step === TOTAL_STEPS && (
+            <button
+              type="submit"
+              className="ct-btn ct-btn--primary btn-press"
+              disabled={submitting}
+            >
+              {submitting ? "Submitting…" : "Submit request"}
+            </button>
+          )}
+        </div>
+      </form>
+
       <style>{`
-        .copy-btn:hover { background-color: #e8ebe7 !important; }
-        .track-btn:hover { background-color: #163d35 !important; border-color: #163d35 !important; }
+        .ct-quote-form-wrap { max-width: 560px; margin: 0 auto; }
+
+        /* Step indicator */
+        .ct-step-list { display: flex; gap: 0; list-style: none; padding: 0; margin: 0 0 2rem; }
+        .ct-step-item {
+          flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+          font-size: 0.75rem; color: var(--color-ink); opacity: 0.4;
+          border-bottom: 2px solid var(--color-rule);
+          padding-bottom: 0.5rem;
+        }
+        .ct-step-item.is-active { opacity: 1; border-color: var(--color-bottle); }
+        .ct-step-item.is-done { opacity: 0.7; border-color: var(--color-brass); }
+        .ct-step-num { font-weight: 600; font-size: 0.875rem; }
+
+        /* Heading */
+        .ct-step-heading { font-size: 1.25rem; margin: 0 0 1.5rem; outline: none; }
+
+        /* Fields */
+        .ct-step-fields { display: flex; flex-direction: column; gap: 1.25rem; }
+        .ct-field { display: flex; flex-direction: column; gap: 0.35rem; }
+        .ct-label { font-size: 0.875rem; font-weight: 500; color: var(--color-ink); }
+        .ct-input, .ct-select, .ct-textarea {
+          padding: 0.6rem 0.75rem;
+          border: 1px solid var(--color-rule);
+          border-radius: 2px;
+          background: var(--color-paper);
+          color: var(--color-ink);
+          font-size: 1rem;
+          font-family: inherit;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .ct-input:focus, .ct-select:focus, .ct-textarea:focus {
+          outline: 2px solid var(--color-bottle);
+          outline-offset: 1px;
+          border-color: var(--color-bottle);
+        }
+        .ct-input[aria-invalid="true"],
+        .ct-select[aria-invalid="true"],
+        .ct-textarea[aria-invalid="true"] {
+          border-color: var(--color-brass);
+        }
+        .ct-textarea { resize: vertical; min-height: 80px; }
+        .ct-field-error { font-size: 0.8rem; color: var(--color-brass); margin: 0; }
+
+        /* Radio */
+        .ct-radio-group { display: flex; gap: 1.5rem; }
+        .ct-radio-label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9375rem; }
+        .ct-radio { accent-color: var(--color-bottle); width: 1rem; height: 1rem; }
+
+        /* Notice */
+        .ct-notice {
+          font-size: 0.85rem; padding: 0.75rem; border-left: 3px solid var(--color-brass);
+          background: var(--color-paper); color: var(--color-ink); margin: 0;
+          border-radius: 0 2px 2px 0;
+        }
+
+        /* Review */
+        .ct-review-section { border: 1px solid var(--color-rule); border-radius: 2px; padding: 1rem; }
+        .ct-review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .ct-review-title { font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ct-edit-btn {
+          background: none; border: 1px solid var(--color-rule); border-radius: 2px;
+          padding: 0.2rem 0.6rem; font-size: 0.8rem; cursor: pointer; color: var(--color-ink);
+        }
+        .ct-edit-btn:hover { border-color: var(--color-bottle); color: var(--color-bottle); }
+        .ct-review-row { display: flex; gap: 0.5rem; font-size: 0.875rem; margin-bottom: 0.3rem; }
+        .ct-review-row-label { color: var(--color-ink); opacity: 0.6; min-width: 90px; }
+        .ct-review-row-value { color: var(--color-ink); word-break: break-word; }
+
+        /* Navigation */
+        .ct-form-nav { display: flex; gap: 0.75rem; margin-top: 2rem; justify-content: flex-end; }
+        .ct-btn {
+          padding: 0.6rem 1.25rem; border-radius: 2px; font-size: 0.9375rem;
+          font-family: inherit; cursor: pointer; border: 1px solid transparent;
+        }
+        .ct-btn--primary { background: var(--color-bottle); color: var(--color-paper); border-color: var(--color-bottle); }
+        .ct-btn--primary:hover { opacity: 0.9; }
+        .ct-btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ct-btn--secondary { background: var(--color-paper); color: var(--color-ink); border-color: var(--color-rule); }
+        .ct-btn--secondary:hover { border-color: var(--color-bottle); color: var(--color-bottle); }
+        .ct-btn--secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Success */
+        .ct-quote-success {
+          display: flex; flex-direction: column; align-items: center;
+          gap: 1.25rem; padding: 2.5rem 1rem; text-align: center;
+          max-width: 480px; margin: 0 auto;
+        }
+        .ct-seal-wrap {
+          animation: ct-press-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+        }
+        @keyframes ct-press-in {
+          0% { transform: scale(1.15); }
+          100% { transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ct-seal-wrap { animation: none; }
+        }
+        .ct-reference-label { font-size: 0.8rem; opacity: 0.6; margin: 0; }
+        .ct-reference-number {
+          font-family: var(--font-serif, serif); font-size: 2rem;
+          letter-spacing: 0.04em; margin: 0; color: var(--color-bottle);
+        }
+        .ct-success-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
       `}</style>
     </div>
   );
 }
 
-/* ── Main form ──────────────────────────────────────────────────────────── */
+/* ------------------------------------------------------------------ */
+/* ReviewSection                                                        */
+/* ------------------------------------------------------------------ */
 
-interface QuoteFormProps {
-  services: Array<{ slug: string; title: string }>;
-  preselectedService?: string;
+interface ReviewRow {
+  label: string;
+  value: string;
 }
 
-export default function QuoteForm({ services, preselectedService }: QuoteFormProps) {
-  const params = useSearchParams();
-  const serviceParam = preselectedService ?? params.get("service") ?? "";
-
-  const initial = { ...INITIAL, service: serviceParam || INITIAL.service };
-  const { step, data, update, next, back, goTo, reset, clearDraft } =
-    useMultiStepForm<QuoteFormData>(initial, 4);
-
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [reference, setReference] = useState<string | null>(null);
-
-  const headingRef = useRef<HTMLHeadingElement>(null);
-
-  // Focus step heading when step changes
-  useEffect(() => {
-    headingRef.current?.focus();
-  }, [step]);
-
-  // Preselect service from URL on mount
-  useEffect(() => {
-    if (serviceParam && !data.service) {
-      update({ service: serviceParam });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function validate(s: number): boolean {
-    let e: FieldErrors = {};
-    if (s === 0) e = validateStep1(data);
-    if (s === 1) e = validateStep2(data);
-    if (s === 2) e = validateStep3(data);
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  function handleNext() {
-    if (validate(step)) next();
-  }
-
-  async function handleSubmit() {
-    if (!validate(2)) {
-      goTo(2);
-      return;
-    }
-    setSubmitting(true);
-    setSubmitError("");
-    try {
-      const res = await fetch("/api/quote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setErrors(json.errors ?? {});
-        setSubmitError("Please correct the errors above.");
-        setSubmitting(false);
-        return;
-      }
-      clearDraft();
-      setReference(json.reference);
-    } catch {
-      setSubmitError("A network error occurred. Please try again.");
-      setSubmitting(false);
-    }
-  }
-
-  if (reference) {
-    return (
-      <Confirmation
-        reference={reference}
-        onReset={() => {
-          setReference(null);
-          reset(initial);
-        }}
-      />
-    );
-  }
-
-  const stepHeadings = [
-    "Step 1 — Service and document",
-    "Step 2 — Quantity and urgency",
-    "Step 3 — Your details",
-    "Step 4 — Review your request",
-  ];
-
+function ReviewSection({
+  title,
+  onEdit,
+  rows,
+}: {
+  title: string;
+  onEdit: () => void;
+  rows: ReviewRow[];
+}) {
   return (
-    <div>
-      <StepIndicator current={step} />
-
-      {/* Visually hidden heading per step — receives focus for screen readers */}
-      <h2
-        ref={headingRef}
-        tabIndex={-1}
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: "1.125rem",
-          fontWeight: 700,
-          color: "var(--color-ink)",
-          marginBottom: "28px",
-          outline: "none",
-        }}
-      >
-        {stepHeadings[step]}
-      </h2>
-
-      {/* ── STEP 1 ─────────────────────────────────── */}
-      {step === 0 && (
-        <div>
-          <div style={S.field}>
-            <label htmlFor="qs-service" style={S.label}>
-              Service <span aria-hidden="true">*</span>
-            </label>
-            <select
-              id="qs-service"
-              value={data.service}
-              onChange={(e) => update({ service: e.target.value })}
-              style={S.select}
-              className="ct-input"
-            >
-              <option value="">Select a service…</option>
-              {services.map((s) => (
-                <option key={s.slug} value={s.slug}>
-                  {s.title}
-                </option>
-              ))}
-            </select>
-            <FieldError msg={errors.service} />
-          </div>
-
-          <div style={S.field}>
-            <label htmlFor="qs-doccat" style={S.label}>
-              Document category <span aria-hidden="true">*</span>
-            </label>
-            <select
-              id="qs-doccat"
-              value={data.documentCategory}
-              onChange={(e) => update({ documentCategory: e.target.value })}
-              style={S.select}
-              className="ct-input"
-            >
-              <option value="">Select a category…</option>
-              {DOC_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <FieldError msg={errors.documentCategory} />
-          </div>
-
-          <div style={S.field}>
-            <label htmlFor="qs-country" style={S.label}>
-              Destination country <span aria-hidden="true">*</span>
-            </label>
-            <input
-              id="qs-country"
-              type="text"
-              value={data.destinationCountry}
-              onChange={(e) => update({ destinationCountry: e.target.value })}
-              placeholder="e.g. United Kingdom"
-              style={S.input}
-              className="ct-input"
-            />
-            <FieldError msg={errors.destinationCountry} />
-          </div>
-
-          <div style={S.field}>
-            <label htmlFor="qs-purpose" style={S.label}>
-              Purpose <span aria-hidden="true">*</span>
-            </label>
-            <textarea
-              id="qs-purpose"
-              rows={3}
-              value={data.purpose}
-              onChange={(e) => update({ purpose: e.target.value })}
-              placeholder="e.g. Visa application for dependent spouse"
-              style={{ ...S.input, resize: "vertical" }}
-              className="ct-input"
-            />
-            <FieldError msg={errors.purpose} />
-          </div>
-
-          <p
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "0.8125rem",
-              color: "var(--color-ink)",
-              opacity: 0.55,
-              borderLeft: "2px solid var(--color-rule)",
-              paddingLeft: "12px",
-              lineHeight: 1.6,
-              marginBottom: "28px",
-            }}
-          >
-            Do not include passport or ID numbers here. We will ask for documents
-            securely after confirming.
-          </p>
-        </div>
-      )}
-
-      {/* ── STEP 2 ─────────────────────────────────── */}
-      {step === 1 && (
-        <div>
-          <div style={S.field}>
-            <label htmlFor="qs-count" style={S.label}>
-              Number of documents <span aria-hidden="true">*</span>
-            </label>
-            <input
-              id="qs-count"
-              type="number"
-              min={1}
-              max={999}
-              value={data.documentCount}
-              onChange={(e) => update({ documentCount: e.target.value })}
-              style={{ ...S.input, width: "140px" }}
-              className="ct-input"
-            />
-            <FieldError msg={errors.documentCount} />
-          </div>
-
-          <fieldset
-            style={{
-              border: "none",
-              padding: 0,
-              margin: "0 0 24px 0",
-            }}
-          >
-            <legend style={{ ...S.label, marginBottom: "12px" }}>
-              Processing speed <span aria-hidden="true">*</span>
-            </legend>
-            {(
-              [
-                {
-                  value: "standard",
-                  label: "Standard",
-                  sub: "5–7 working days",
-                },
-                {
-                  value: "urgent",
-                  label: "Urgent",
-                  sub: "2–3 working days, subject to authority availability",
-                },
-              ] as const
-            ).map(({ value, label, sub }) => (
-              <label
-                key={value}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "12px",
-                  padding: "14px 16px",
-                  border: `1px solid ${data.urgency === value ? "var(--color-bottle)" : "var(--color-rule)"}`,
-                  borderRadius: "2px",
-                  marginBottom: "10px",
-                  cursor: "pointer",
-                  backgroundColor:
-                    data.urgency === value
-                      ? "rgba(31,77,67,0.04)"
-                      : "transparent",
-                }}
-              >
-                <input
-                  type="radio"
-                  name="urgency"
-                  value={value}
-                  checked={data.urgency === value}
-                  onChange={() => update({ urgency: value })}
-                  style={{ marginTop: "2px", accentColor: "var(--color-bottle)" }}
-                />
-                <span>
-                  <span
-                    style={{
-                      display: "block",
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "0.9375rem",
-                      color: "var(--color-ink)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {label}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "0.8125rem",
-                      color: "var(--color-ink)",
-                      opacity: 0.6,
-                    }}
-                  >
-                    {sub}
-                  </span>
-                </span>
-              </label>
-            ))}
-            <FieldError msg={errors.urgency} />
-          </fieldset>
-        </div>
-      )}
-
-      {/* ── STEP 3 ─────────────────────────────────── */}
-      {step === 2 && (
-        <div>
-          {/* Honeypot — hidden from real users */}
-          <div style={{ position: "absolute", left: "-9999px", overflow: "hidden" }} aria-hidden="true">
-            <label htmlFor="qs-company">Company</label>
-            <input
-              id="qs-company"
-              name="company"
-              type="text"
-              tabIndex={-1}
-              autoComplete="off"
-              value={data.company}
-              onChange={(e) => update({ company: e.target.value })}
-            />
-          </div>
-
-          <div style={S.field}>
-            <label htmlFor="qs-name" style={S.label}>
-              Full name <span aria-hidden="true">*</span>
-            </label>
-            <input
-              id="qs-name"
-              type="text"
-              autoComplete="name"
-              value={data.name}
-              onChange={(e) => update({ name: e.target.value })}
-              style={S.input}
-              className="ct-input"
-            />
-            <FieldError msg={errors.name} />
-          </div>
-
-          <div style={S.field}>
-            <label htmlFor="qs-email" style={S.label}>
-              Email address <span aria-hidden="true">*</span>
-            </label>
-            <input
-              id="qs-email"
-              type="email"
-              autoComplete="email"
-              value={data.email}
-              onChange={(e) => update({ email: e.target.value })}
-              style={S.input}
-              className="ct-input"
-            />
-            <FieldError msg={errors.email} />
-          </div>
-
-          <div style={S.field}>
-            <label htmlFor="qs-phone" style={S.label}>
-              Phone number <span style={{ opacity: 0.5 }}>(optional)</span>
-            </label>
-            <input
-              id="qs-phone"
-              type="tel"
-              autoComplete="tel"
-              value={data.phone}
-              onChange={(e) => update({ phone: e.target.value })}
-              placeholder="+971 50 000 0000"
-              style={S.input}
-              className="ct-input"
-            />
-            <FieldError msg={errors.phone} />
-          </div>
-        </div>
-      )}
-
-      {/* ── STEP 4 — Review ────────────────────────── */}
-      {step === 3 && (
-        <div>
-          {[
-            {
-              stepIndex: 0,
-              heading: "Service and document",
-              rows: [
-                {
-                  label: "Service",
-                  value:
-                    services.find((s) => s.slug === data.service)?.title ||
-                    data.service ||
-                    "—",
-                },
-                { label: "Category", value: data.documentCategory || "—" },
-                { label: "Destination", value: data.destinationCountry || "—" },
-                { label: "Purpose", value: data.purpose || "—" },
-              ],
-            },
-            {
-              stepIndex: 1,
-              heading: "Quantity and urgency",
-              rows: [
-                { label: "Documents", value: data.documentCount || "—" },
-                { label: "Speed", value: data.urgency || "—" },
-              ],
-            },
-            {
-              stepIndex: 2,
-              heading: "Your details",
-              rows: [
-                { label: "Name", value: data.name || "—" },
-                { label: "Email", value: data.email || "—" },
-                { label: "Phone", value: data.phone || "(not provided)" },
-              ],
-            },
-          ].map(({ stepIndex, heading, rows }) => (
-            <div
-              key={heading}
-              style={{
-                border: "1px solid var(--color-rule)",
-                borderRadius: "2px",
-                marginBottom: "16px",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  borderBottom: "1px solid var(--color-rule)",
-                  backgroundColor: "rgba(201,208,202,0.18)",
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    fontSize: "0.9375rem",
-                    fontWeight: 700,
-                    color: "var(--color-ink)",
-                  }}
-                >
-                  {heading}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setErrors({});
-                    goTo(stepIndex);
-                  }}
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "0.8125rem",
-                    color: "var(--color-bottle)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "2px 0",
-                    textDecoration: "underline",
-                    textUnderlineOffset: "3px",
-                  }}
-                >
-                  Edit
-                </button>
-              </div>
-              <dl style={{ margin: 0, padding: "12px 16px" }}>
-                {rows.map(({ label, value }) => (
-                  <div
-                    key={label}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "140px 1fr",
-                      gap: "8px",
-                      padding: "6px 0",
-                      borderBottom: "1px solid rgba(201,208,202,0.4)",
-                    }}
-                    className="review-row"
-                  >
-                    <dt
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "0.8125rem",
-                        color: "var(--color-ink)",
-                        opacity: 0.55,
-                      }}
-                    >
-                      {label}
-                    </dt>
-                    <dd
-                      style={{
-                        margin: 0,
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "0.875rem",
-                        color: "var(--color-ink)",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          ))}
-
-          {submitError && (
-            <p role="alert" style={{ ...S.error, marginBottom: "16px" }}>
-              {submitError}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ── Navigation ─────────────────────────────── */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "8px",
-          paddingTop: "24px",
-          borderTop: "1px solid var(--color-rule)",
-        }}
-      >
-        <button
-          type="button"
-          onClick={back}
-          disabled={step === 0}
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "0.9375rem",
-            color: "var(--color-ink)",
-            background: "none",
-            border: "1px solid var(--color-rule)",
-            borderRadius: "2px",
-            padding: "10px 22px",
-            cursor: step === 0 ? "not-allowed" : "pointer",
-            opacity: step === 0 ? 0.3 : 1,
-          }}
-          className="nav-back"
-        >
-          Back
+    <div className="ct-review-section">
+      <div className="ct-review-header">
+        <span className="ct-review-title">{title}</span>
+        <button type="button" className="ct-edit-btn" onClick={onEdit}>
+          Edit
         </button>
-
-        {step < 3 ? (
-          <button
-            type="button"
-            onClick={handleNext}
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "0.9375rem",
-              fontWeight: 500,
-              color: "var(--color-paper)",
-              backgroundColor: "var(--color-bottle)",
-              border: "1.5px solid var(--color-bottle)",
-              borderRadius: "2px",
-              padding: "10px 28px",
-              cursor: "pointer",
-            }}
-            className="nav-next"
-          >
-            Next
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "0.9375rem",
-              fontWeight: 500,
-              color: "var(--color-paper)",
-              backgroundColor: "var(--color-bottle)",
-              border: "1.5px solid var(--color-bottle)",
-              borderRadius: "2px",
-              padding: "10px 28px",
-              cursor: submitting ? "not-allowed" : "pointer",
-              opacity: submitting ? 0.65 : 1,
-            }}
-            className="nav-submit"
-          >
-            {submitting ? "Submitting…" : "Submit enquiry"}
-          </button>
-        )}
       </div>
-
-      <style>{`
-        .ct-input:focus { border-color: var(--color-bottle); box-shadow: 0 0 0 2px rgba(31,77,67,0.14); }
-        .nav-next:hover, .nav-submit:hover:not(:disabled) { background-color: #163d35 !important; border-color: #163d35 !important; }
-        .nav-back:hover:not(:disabled) { background-color: #e8ebe7; }
-        @media (max-width: 500px) {
-          .review-row { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+      {rows.map(({ label, value }) => (
+        <div key={label} className="ct-review-row">
+          <span className="ct-review-row-label">{label}</span>
+          <span className="ct-review-row-value">{value || "—"}</span>
+        </div>
+      ))}
     </div>
   );
 }
