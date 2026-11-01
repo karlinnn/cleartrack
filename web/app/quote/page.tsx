@@ -1,45 +1,35 @@
 import type { Metadata } from "next";
-import { getServices } from "@/lib/api";
 import QuoteForm from "@/components/QuoteForm";
+import { getServices } from "@/lib/api";
+import { cleanText } from "@/lib/text";
 
 export const metadata: Metadata = {
-  title: "Request a quote — ClearTrack",
+  title: "Request a quote",
   description:
-    "Get a quote for document clearing, attestation and legalisation services. Fill in the form and we will respond within one business day.",
+    "Tell us which document service you need and we will send you a quote.",
 };
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").trim();
-}
-
 interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<{ service?: string }>;
 }
 
 export default async function QuotePage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const initialService =
-    typeof params.service === "string" ? params.service : undefined;
+  const sp = await searchParams;
+  const posts = (await getServices()).filter((p) => p.slug !== "hello-world");
 
-  const rawServices = await getServices();
-  const services = rawServices.map((s: { title?: string; name?: string } | string) => {
-    if (typeof s === "string") return stripHtml(s);
-    const raw = s.title ?? s.name ?? "";
-    return stripHtml(raw);
-  }).filter(Boolean);
+  const titles = posts.map((p) => cleanText(p.title.rendered));
+
+  // ?service=<slug> preselects that service by its title
+  const match = posts.find((p) => p.slug === sp.service);
+  const initialService = match ? cleanText(match.title.rendered) : undefined;
 
   return (
-    <main className="ct-page">
-      <div className="ct-container">
-        <header className="ct-page-header">
-          <h1 className="ct-page-title">Request a quote</h1>
-          <p className="ct-page-intro">
-            Tell us about your documents and we will send you a detailed quote
-            within one business day. No commitment required.
-          </p>
-        </header>
-        <QuoteForm services={services} initialService={initialService} />
-      </div>
+    <main className="mx-auto max-w-5xl px-6 py-16">
+      <h1 className="font-serif text-4xl text-[#10231F]">Request a quote</h1>
+      <p className="mt-3 mb-10 max-w-prose text-[#10231F]">
+        Tell us what you need cleared. We reply within one working day.
+      </p>
+      <QuoteForm services={titles} initialService={initialService} />
     </main>
   );
 }

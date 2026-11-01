@@ -28,10 +28,10 @@ function formatDateTime(iso: string): string {
 }
 
 interface TrackClientProps {
-  ref?: string;
+  initialRef?: string;
 }
 
-export default function TrackClient({ ref: initialRef }: TrackClientProps) {
+export default function TrackClient({ initialRef }: TrackClientProps) {
   const [input, setInput] = useState(initialRef ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

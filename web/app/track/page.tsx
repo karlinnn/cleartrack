@@ -25,7 +25,7 @@ export default async function TrackPage({ searchParams }: PageProps) {
             document clearing request.
           </p>
         </header>
-        <TrackClient ref={ref} />
+        <TrackClient initialRef={ref} />
       </div>
     </main>
   );
