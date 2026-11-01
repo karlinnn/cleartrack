@@ -36,8 +36,8 @@ Environment variables:
 
 | Name | Purpose |
 |---|---|
-| NEXT_PUBLIC_WP_API_URL | WordPress.com REST API base URL |
-| NEXT_PUBLIC_SITE_URL | Public site URL, used for the sitemap and metadata |
+| NEXT_PUBLIC_WP_API_URL : https://public-api.wordpress.com/wp/v2/sites/cleartrackdemo.wordpress.com | WordPress.com REST API base URL |
+| NEXT_PUBLIC_SITE_URL: https://cleartrack-biizv04k0-karlinfrancis-4599s-projects.vercel.app/ | Public site URL, used for the sitemap and metadata |
 
 
 ## Known limits
